@@ -2,6 +2,7 @@ package com.lectorh;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -23,6 +24,7 @@ import android.widget.TextView;
 import com.android.biomini.BioMiniAdnroid;
 import com.android.biomini.IBioMiniCallback;
 //import com.example.androiddemosample.R;
+
 
 
 
@@ -70,6 +72,8 @@ public class MainActivity extends Activity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
         setContentView(R.layout.layout_main);
         
+        final DatabaseClass db = new DatabaseClass(this);
+        
      // allocate SDK instance 
      		if(mBioMiniHandle == null) {
      			mBioMiniHandle = new BioMiniAdnroid(this);
@@ -99,7 +103,7 @@ public class MainActivity extends Activity {
     					if(ufa_res == 0) {
     						
     						
-    				// =========== Default Values ===========		
+    				// =========== Set Default Values ===========		
     						nsensitivity = 7; 
     						ntimeout = 10;
     						nsecuritylevel = 4;
@@ -144,6 +148,7 @@ public class MainActivity extends Activity {
     					
     					// capture fingerprint image
     					mBioMiniHandle.UFA_CaptureSingle(pImage);
+    					//Log.d("pImage Value1", ""+pImage);
     					
     					if(ufa_res != 0) {						
     						errmsg = mBioMiniHandle.UFA_GetErrorString(ufa_res); 
@@ -216,8 +221,9 @@ public class MainActivity extends Activity {
     	            	public void onClick(DialogInterface dialog, int which) {
     	            		EditText tv = (EditText)layout.findViewById(R.id.EditTest01); 
     	            		pEnrolledUser[nenrolled] = tv.getText().toString();
+    	            		Log.d("Name User", ""+pEnrolledUser[nenrolled]);
     	            		isname = true;
-    	            		}
+    	            	}
     	            });
     	            aDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
     	            	public void onClick(DialogInterface dialog, int which) {
@@ -272,10 +278,27 @@ public class MainActivity extends Activity {
     					}
     					
     					mBioMiniCallbackHandler.onCaptureCallback(pImage, 320, 480, 500, true);
+    					//Log.d("pImage Value", ""+pImage);
             	        
     					// extract fingerpirnt template from captured image
     					// extracted template is saved in memory (ptemplate1: 2-D byte array)
     					ufa_res = mBioMiniHandle.UFA_ExtractTemplate(ptemplate1[nenrolled], ntemplateSize1[nenrolled], nquality, 1024);
+    					//Log.d("huella", ""+ptemplate1[0][0]);
+    					
+    					// Inserting Contacts
+				        Log.d("Insert: ", "Inserting .."+pEnrolledUser[nenrolled]); 
+				        db.addUser(new User(pEnrolledUser[nenrolled], ptemplate2));        
+
+				        // Reading all contacts
+				        Log.d("Reading: ", "Reading all contacts.."); 
+				        List<User> users = db.getAllUsers();       
+				         
+				        for (User usr : users) {
+				            String log = "Id: "+usr.getID()+" ,Name: " + usr.getName() + " ,Huella: " + usr.getHuella();
+				                // Writing Contacts to log
+				            Log.d("Name: ", log);
+					
+				        }
     					
     					if(ufa_res != 0) {	
     						errmsg = mBioMiniHandle.UFA_GetErrorString(ufa_res); 
@@ -341,12 +364,25 @@ public class MainActivity extends Activity {
     					{
     						// try 1:1 template matching 
     						ufa_res = mBioMiniHandle.UFA_Verify(ptemplate1[i], ntemplateSize1[i][0], ptemplate2, ntemplateSize2[0], nVerificationResult);
+    						//Log.d("Matching: ", "ptemplate1->"+ptemplate1[i][0]+"---- ptemplate2->"+ptemplate2[0]);
     						if(nVerificationResult[0] == 1) {
     							TextView tv = (TextView)findViewById(R.id.txmessage );
     							tv.setText("Match with: " +pEnrolledUser[i]);
     							break;
     						}
     					}
+    					
+    					
+    					String count = db.getCount(ptemplate2);
+    			        
+    			        int count2 = Integer.parseInt(count);
+    			        
+    			        if(count2 > 0){
+    			        	Log.d("Coincidencias", "Se encontraron "+count2+" coinicidencias");
+    			        }else{
+    			        	Log.d("Msg", "NO existen coincidencias");
+    			        };
+    					
     					
     					if(ufa_res != 0) {						
     						errmsg = mBioMiniHandle.UFA_GetErrorString(ufa_res); 
